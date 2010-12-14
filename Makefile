@@ -4,7 +4,7 @@ INST_DIR = /usr/local/bin/
 CC = gcc
 CCFLAG = -Wall
 
-SRC = main.c
+SRC = main.c bookmark.c
 OBJ = $(patsubst %.c,%.o,$(wildcard *.c))
 
 all: $(TARGET)

@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include "utoc.h"
+#include "bookmark.h"
 
 s_utoc utoc;
 
@@ -301,36 +302,6 @@ int save_statistic (void)
 //	}
 //}
 
-//*****************************************************************************
-//
-int found_bookmark (char * filename)
-{
-  FILE * f;
-	char * homepath;
-	char * fname;
-	char str [_BKMK_RECORD_LEN];
-
-	homepath = getenv("HOME");
-	fname = malloc (sizeof (char) * (strlen (homepath) + strlen (_BKMK_NAME)));
-	strcpy (fname, homepath);
-	strcat (fname, _BKMK_NAME);
-
-	f = fopen (fname, "r");
-	if (f == NULL) {
-		printf ("Can't open bookmark file [%s]\n", fname);
-	} else {
-		// found saved record for 'filename'
-		while (fgets (str, _BKMK_RECORD_LEN, f) != 0 ) {
-			char * sbstr = strstr (str, filename);
-			if ((sbstr != 0) && (strlen (sbstr) > 0)) {
-				printf ("%s", sbstr);
-			}
-		}
-		fclose (f);
-	}
-	free (fname);
-	return 0;
-}
 
 //*****************************************************************************
 //
@@ -338,6 +309,7 @@ int main (int argc, char ** argv)
 {
   FILE * fl, fb;
 	int err, len;
+	int pos;
 
 	utoc.filename = NULL;
 
@@ -350,7 +322,12 @@ int main (int argc, char ** argv)
 		return 0;
 	}
 
-	found_bookmark (utoc.filename);
+	if (load_bookmark (&utoc)) {
+		printf ("ERROR: can't load bookmark\n");
+	} else {
+		pos = find_bookmark (&utoc);
+		printf ("found pos from bookmark: %d\n", pos);
+	}
 
 // open text file
 	fl = fopen (utoc.filename, "r");
@@ -358,6 +335,7 @@ int main (int argc, char ** argv)
 		printf ("Can't open file %s\n", utoc.filename);
 		return 1;
 	}
+	fseek (fl, pos, SEEK_SET);
 
 	len = fread (utoc.str, sizeof (char), _STR_LEN-2, fl);
 	utoc.str [len] = '\0';

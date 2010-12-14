@@ -23,7 +23,15 @@ typedef struct {
 	int err_char_cnt;
 	int speed;
 	int pererr;
+	char * hist_mem;
+	int hist_size;
 } s_utoc;
+
+
+typedef struct {
+	char hash [33]; // 32 char of hash + one whidechar
+	char pos [8];
+} hist_rec;
 
 #endif
 
