@@ -9,6 +9,14 @@
 #include "utoc.h"
 #include "bookmark.h"
 
+#define _MAIN_DEBUG 0
+
+#if _MAIN_DEBUG
+#define DBG(...) DBG_MSG(__VA_ARGS__)
+#else
+#define DBG(...) ;
+#endif
+
 s_utoc utoc;
 
 //*****************************************************************************
@@ -84,7 +92,7 @@ void update_str (int err)
 // new line symbol
 int prepare_srt (char * str)
 {
-	//printf ("input: [%s]\n", str);
+	//DBG ("input: [%s]\n", str);
 	int i;
 	
 	while ((str[0] == ' ') || (str[0] == '\n')) {
@@ -163,7 +171,7 @@ int show_all_statictic (void)
 	f = fopen (filename, "r");
 	free (filename);
 	if (f == NULL) {
-		printf ("Can't open file [%s]\n", filename);
+		DBG ("Can't open file [%s]\n", filename);
 		return 1;
 	}
 	printf ("You statistic:\n");
@@ -214,7 +222,6 @@ int parse_cmdline (int argc, char ** argv)
 		} else {
 			if (utoc.filename != NULL) {
 				printf ("ERROR: bad option [%s], try --help for usage\n", argv[i]);
-				free (utoc.filename);
 				return false;
 			}
 			int len = strlen (argv[i]);
@@ -250,7 +257,7 @@ int time_is_over (int m_time)
 {
 	time_t cur;
 	time (&cur);
-	if ((cur - utoc.start_time) > m_time * 60)
+	if ((cur - utoc.start_time) > m_time * 1/*60*/)
 		return true;
 	return false;
 }
@@ -270,7 +277,7 @@ int save_statistic (void)
 
 	f = fopen (filename, "a+");
 	if (f == NULL) {
-		printf ("Can't open history file [%s]\n", filename);
+		DBG ("Can't open history file [%s]\n", filename);
 	} else {
 		sprintf (str, "chars[%d] speed[%d] err[%d]\n",utoc.char_cnt, utoc.speed, utoc.pererr);
 		fwrite (str, sizeof (char), strlen (str), f);
@@ -280,38 +287,16 @@ int save_statistic (void)
 	return 0;
 }
 
-////*****************************************************************************
-////
-//void save_bookmark (char * filename, int pos)
-//{
-//  FILE * f;
-//	char * homepath;
-//	char * fname;
-//	char str [_BKMK_RECORD_LEN];
-//
-//	homepath = getenv("HOME");
-//	fname = malloc (sizeof (char) * (strlen (homepath) + strlen (_BKMK_NAME)));
-//	strcpy (fname, homepath);
-//	strcat (fname, _BKMK_NAME);
-//
-//	f = fopen (fname, "a+");
-//	if (f == NULL) {
-//		printf ("Can't open bookmark file [%s]\n", fname);
-//	} else {
-//
-//	}
-//}
-
-
 //*****************************************************************************
 //
 int main (int argc, char ** argv)
 {
   FILE * fl, fb;
 	int err, len;
-	int pos;
+	int pos = 0;
 
 	utoc.filename = NULL;
+	utoc.start_position = 0;
 
 	if (!parse_cmdline (argc, argv)) {
 		return 1;
@@ -323,10 +308,10 @@ int main (int argc, char ** argv)
 	}
 
 	if (load_bookmark (&utoc)) {
-		printf ("ERROR: can't load bookmark\n");
+		printf ("can't load bookmark\n");
 	} else {
-		pos = find_bookmark (&utoc);
-		printf ("found pos from bookmark: %d\n", pos);
+		find_bookmark (&utoc);
+		DBG ("found pos from bookmark: %d\n", utoc.start_position);
 	}
 
 // open text file
@@ -335,7 +320,7 @@ int main (int argc, char ** argv)
 		printf ("Can't open file %s\n", utoc.filename);
 		return 1;
 	}
-	fseek (fl, pos, SEEK_SET);
+	fseek (fl, utoc.start_position, SEEK_SET);
 
 	len = fread (utoc.str, sizeof (char), _STR_LEN-2, fl);
 	utoc.str [len] = '\0';
@@ -368,6 +353,7 @@ int main (int argc, char ** argv)
 				calc_statistic ();
 				print_statistic ();
 				save_statistic ();
+				save_bookmark (&utoc);
 				break;
 			}
 			len = fread (utoc.str, sizeof (char), _STR_LEN-2, fl);
@@ -380,6 +366,7 @@ int main (int argc, char ** argv)
 			utoc.cursor = 0;
 		}
 	}
-	fclose (fl);
+	DBG ("app exit\n");
+	//fclose (fl);
 }
  

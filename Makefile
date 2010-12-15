@@ -2,7 +2,7 @@ TARGET = utoc
 INST_DIR = /usr/local/bin/
 
 CC = gcc
-CCFLAG = -Wall
+CCFLAG = -Wall -g
 
 SRC = main.c bookmark.c
 OBJ = $(patsubst %.c,%.o,$(wildcard *.c))
