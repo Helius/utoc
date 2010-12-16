@@ -15,6 +15,8 @@
 #define _BKMK_NAME_1 "/.utoc_bkmk_1"
 
 typedef struct {
+	int debug;
+	int nohist;
 	char * filename;
 	char str [_STR_LEN];
 	time_t start_time;

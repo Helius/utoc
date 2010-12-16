@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include "utoc.h"
 #include "bookmark.h"
+#include "dbg.h"
 
 #define _MAIN_DEBUG 0
 
@@ -28,6 +29,8 @@ void print_usage (char * name)
 	printf ("\t%s [-t] txtfile\n\n", name);
 	printf ("\t -t [1..60]\ttime for training in minuts, after which application will exit\n", name);
 	printf ("\t -s --stat \tptint train history and statictics (from ~/.utoc file)\n", name);
+	printf ("\t -d --debug \tptint debug info\n", name);
+	printf ("\t -b --begin \tnot use history for file, start from begin of file\n", name);
 	printf ("\t -h --help \tthis message\n", name);
 }
 
@@ -136,10 +139,16 @@ int get_dig (char * arr, char * ch, int i)
 
 //*****************************************************************************
 // find and obtain digits value from string
-void parse_stat_line (char * str, int * ch, int * sp, int * err)
+void parse_stat_line (char * str, char * date, int * ch, int * sp, int * err)
 {
 	char tmp[8];
-	char * sbstr = strstr(str, "chars");
+	char * sbstr;
+
+	sbstr = strstr (str, "::");
+	if (sbstr != NULL)
+		strncpy (date, str, sbstr-str);
+
+	sbstr = strstr(str, "chars");
 	get_dig (tmp, sbstr + 6, 0);
 	*ch = atoi (tmp);	
 	
@@ -174,12 +183,13 @@ int show_all_statictic (void)
 		DBG ("Can't open file [%s]\n", filename);
 		return 1;
 	}
-	printf ("You statistic:\n");
+	printf ("Your statistic:\n");
 	while (fgets (str, _STR_LEN, f) != NULL) {
 		int chnmb, speed, err, i;
-		parse_stat_line (str, &chnmb, &speed, &err);
+		char date [64] = {0};
+		parse_stat_line (str, date, &chnmb, &speed, &err);
 		allchar += chnmb;
-		printf ("chars [%d], speed [%d], err [%d]\t", chnmb, speed, err);
+		printf ("%s: chars [%d], speed [%d], err [%d]\t", date, chnmb, speed, err);
 		for (i = 0; i < speed/10; i++)
 			printf ("#");
 		for (i = 0; i < err/10; i++)
@@ -219,6 +229,11 @@ int parse_cmdline (int argc, char ** argv)
 		}	else if ((strcmp (argv[i], "-s") == 0) || (strcmp (argv[i], "--stat") == 0)) {
 			show_all_statictic ();
 			return false;
+		}	else if ((strcmp (argv[i], "-d") == 0) || (strcmp (argv[i], "--debug") == 0)) {
+			utoc.debug = true;
+			printf ("debug mode activated!\n");
+		}	else if ((strcmp (argv[i], "-b") == 0) || (strcmp (argv[i], "--begin") == 0)) {
+			utoc.nohist = true;
 		} else {
 			if (utoc.filename != NULL) {
 				printf ("ERROR: bad option [%s], try --help for usage\n", argv[i]);
@@ -255,11 +270,42 @@ void print_statistic (void)
 //
 int time_is_over (int m_time) 
 {
+	if (utoc.debug) 
+		return true;
+
 	time_t cur;
 	time (&cur);
-	if ((cur - utoc.start_time) > m_time * 1/*60*/)
+	if ((cur - utoc.start_time) > m_time * 60)
 		return true;
 	return false;
+}
+//*****************************************************************************
+//
+static int get_date (char * str)
+{
+	FILE * f;
+	char buf [64];
+
+		f = popen( "date +\"%k:%M %a %d.%m.%Y|\"", "r" );
+		if ( f == 0 ) {
+				fprintf( stderr, "Could not execute\n" );
+				return 1;
+		}
+	
+		if (fgets (buf, 64 , f)) {
+			//DBG ("date: [%s]", buf);
+			int i = 0;
+			while ((buf[i] != '|') && (i < strlen (buf))) {
+				str[i] = buf [i];
+				i++;
+			}
+			str[i] = 0;
+			//DBG ("date: [%s]", str);
+			pclose (f);
+			return 0;
+		}
+		pclose (f);
+		return 1;
 }
 //*****************************************************************************
 //
@@ -268,7 +314,7 @@ int save_statistic (void)
   FILE * f;
 	char * homepath;
 	char * filename;
-	char str [60];
+	char str [128];
 
 	homepath = getenv("HOME");
 	filename = malloc (sizeof (char) * (strlen (homepath) + strlen (_HIST_NAME)));
@@ -279,7 +325,12 @@ int save_statistic (void)
 	if (f == NULL) {
 		DBG ("Can't open history file [%s]\n", filename);
 	} else {
-		sprintf (str, "chars[%d] speed[%d] err[%d]\n",utoc.char_cnt, utoc.speed, utoc.pererr);
+		char date [64];
+		memset (date, 0, 64);
+		get_date (date);
+		DBG ("make stat str");
+		sprintf (str, "%s:: chars[%d] speed[%d] err[%d]\n", date, utoc.char_cnt, utoc.speed, utoc.pererr);
+		DBG ("%s",str);
 		fwrite (str, sizeof (char), strlen (str), f);
 		fclose (f);
 	}
@@ -307,11 +358,13 @@ int main (int argc, char ** argv)
 		return 0;
 	}
 
-	if (load_bookmark (&utoc)) {
-		printf ("can't load bookmark\n");
-	} else {
-		find_bookmark (&utoc);
-		DBG ("found pos from bookmark: %d\n", utoc.start_position);
+	if (!utoc.nohist) {
+		if (load_bookmark (&utoc)) {
+			printf ("can't load bookmark\n");
+		} else {
+			find_bookmark (&utoc);
+			DBG ("found pos from bookmark: %d\n", utoc.start_position);
+		}
 	}
 
 // open text file
@@ -350,10 +403,15 @@ int main (int argc, char ** argv)
 		delete_str ();
 		if (utoc.cursor > strlen (utoc.str) - 1) {
 			if (time_is_over (utoc.timeout_m)) {
+				DBG ("calc stat");
 				calc_statistic ();
+				DBG ("print stat");
 				print_statistic ();
+				DBG ("save stat");
 				save_statistic ();
-				save_bookmark (&utoc);
+				DBG ("save bookmark")
+				if (!utoc.nohist)
+					save_bookmark (&utoc);
 				break;
 			}
 			len = fread (utoc.str, sizeof (char), _STR_LEN-2, fl);

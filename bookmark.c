@@ -40,6 +40,7 @@ static int get_hash (char * str, char * hash)
 
 
 
+
 //*****************************************************************************
 //
 int load_bookmark (s_utoc * utoc)
