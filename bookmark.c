@@ -24,7 +24,7 @@ static int get_hash (char * str, char * hash)
 
 		f = popen( cmd, "r" );
 		if ( f == 0 ) {
-				fprintf( stderr, "Could not execute\n" );
+				fprintf( stderr, "Could not execute 'md5sum' external programm, chek for 'md5sum' hase been installed\n" );
 				return 1;
 		}
 		const int BUFSIZE = 256;

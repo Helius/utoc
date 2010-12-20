@@ -189,10 +189,10 @@ int show_all_statictic (void)
 		char date [64] = {0};
 		parse_stat_line (str, date, &chnmb, &speed, &err);
 		allchar += chnmb;
-		printf ("%s: chars [%d], speed [%d], err [%d]\t", date, chnmb, speed, err);
+		printf ("%s:\tchars [%d],\tspeed [%d],\terr [%d] \t\t", date, chnmb, speed, err);
 		for (i = 0; i < speed/10; i++)
 			printf ("#");
-		for (i = 0; i < err/10; i++)
+		for (i = 0; i < err/1; i++)
 			printf ("-");
 		printf ("\n");
 	}
@@ -209,7 +209,6 @@ int parse_cmdline (int argc, char ** argv)
 {
 	utoc.filename = NULL; 
 	if ((argc < _MIN_ARG_CNT) || (argc > _MAX_ARG_CNT)) {
-		printf ("arg count error\n");
 		print_usage (argv[0]);
 		return false;
 	}
