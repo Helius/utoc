@@ -95,7 +95,6 @@ void update_str (int err)
 // new line symbol
 int prepare_srt (char * str)
 {
-	//DBG ("input: [%s]\n", str);
 	int i;
 	
 	while ((str[0] == ' ') || (str[0] == '\n')) {
@@ -189,9 +188,12 @@ int show_all_statictic (void)
 		char date [64] = {0};
 		parse_stat_line (str, date, &chnmb, &speed, &err);
 		allchar += chnmb;
-		printf ("%s:\tchars [%d],\tspeed [%d],\terr [%d] \t\t", date, chnmb, speed, err);
-		for (i = 0; i < speed/10; i++)
+		printf ("%s:\tchars [%d],\tspeed [%d],\terr [%d] \t", date, chnmb, speed, err);
+		for (i = 0; i < speed/5; i++)
 			printf ("#");
+		for (i = 0; i < (250/5) - (speed/5); i++)
+			printf (" ");
+//		printf ("\t");
 		for (i = 0; i < err/1; i++)
 			printf ("-");
 		printf ("\n");
